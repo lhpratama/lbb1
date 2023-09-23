@@ -219,6 +219,15 @@ plot(melb2$PricePerSQM~ melb2$Regionname)
 Dari boxplot di atas, ditemukan bahwa Southern Metropolitan memiliki median harga per meter persegi tertinggi, sedangkan South-Eastern Metropolitan memiliki harga terendah.
 
 ***4. SUMMARY***
+
+Dalam data properti yang disajikan, properti yang paling banyak terjual berada di suburb Reservoir.
+
+Namun, properti yang paling mahal adalah sebuah townhouse yang terletak di area suburb East Melbourne. Properti ini memiliki luas sekitar 15703.536 meter persegi per meter persegi (pSQM), menjadikannya salah satu yang paling mahal dalam dataset ini. Townhouse ini memiliki 2 ruangan, 2 kamar tidur, dan 4 kamar mandi. Terletak di wilayah Southern Metropolitan, properti ini menawarkan kemewahan dan fasilitas yang sangat eksklusif, mencerminkan gaya hidup yang mewah dan nyaman bagi pemiliknya.
+
+
+----------------------------------------
+DOT POINTS
+
 1. Dalam data yang disajikan, properti yang paling banyak terjual berada pada suburb Reservoir
 
 2. Housing Termahal:
