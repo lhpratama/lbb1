@@ -2,16 +2,25 @@
 title: "LBB1"
 author: "Luthfi"
 date: "2023-09-23"
-output: html_document
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    number_sections: true
+    df_print: paged
 ---
-***1. REAL ESTATE MELBOURNE***
 
-This is a snapshot of a dataset created by Tony Pino.
-link: https://www.kaggle.com/datasets/dansbecker/melbourne-housing-snapshot
+# 1. REAL ESTATE MELBOURNE
+
+This is a snapshot of a dataset created by Tony Pino. link: <https://www.kaggle.com/datasets/dansbecker/melbourne-housing-snapshot>
 
 It was scraped from publicly available results posted every week from Domain.com.au. He cleaned it well, and now it's up to you to make data analysis magic. The dataset includes Address, Type of Real estate, Suburb, Method of Selling, Rooms, Price, Real Estate Agent, Date of Sale and distance from C.B.D.
 
-**Notes on Specific Variables**
+## Notes on Specific Variables
+
 Rooms: Number of rooms
 
 Price: Price in dollars
@@ -26,11 +35,11 @@ Date: Date sold
 
 Distance: Distance from CBD
 
-Regionname: General Region (West, North West, North, North east …etc)
+Regionname: General Region (West, North West, North, North east ...etc)
 
 Propertycount: Number of properties that exist in the suburb.
 
-Bedroom2 : Scraped # of Bedrooms (from different source)
+Bedroom2 : Scraped \# of Bedrooms (from different source)
 
 Bathroom: Number of Bathrooms
 
@@ -42,75 +51,75 @@ BuildingArea: Building Size
 
 CouncilArea: Governing council for the area
 
+---------
+The First step is inserting the csv file into R located in data_input and then installing the necessary plugins including dplyr, ggplot2, and leaflet that will be used.
+
 ```{r}
 #Read data csv
 melb <- read.csv("data_input/melb_data.csv")
 
-#install package dplyr to manipulate character data
-library(dplyr)
+library(dplyr) #install package dplyr to manipulate character data
+library(ggplot2) #install package ggplot2 for data visualization
+library(leaflet) #install package leaflet for map plotting
 
 ```
 
-***2. DATA PREPERATION***
+#2. DATA PREPERATION
+
+Next, we will inspect the 'melb' folder and then remove duplicate rows based on the 'Address' column. Additionally, we will eliminate any unnecessary columns.
+
 ```{r}
 #First, we read the .csv file and use only the relevant columns
 melb
-```
-
-
-```{r}
+#Clean duplicates based on address
+melb <- melb[!duplicated(melb$Address),]
 # Removing unnecessary columns using select()
-melb2 <- melb[,!names(melb) %in% c("Address", "Postcode", "Lattitude", "Longtitude", "Propertycount", "CouncilArea", "YearBuilt")]
-melb2
+melb2 <- melb[,!names(melb) %in% c("Address", "Postcode", "Propertycount", "CouncilArea", "YearBuilt", "BuildingArea")]
+# Removing NA Rows and "0"
+melb2 <- melb2[melb2$Landsize != 0, ]
 ```
+
+After removing the unnecessary rows and columns, we will proceed to convert the data types to facilitate plotting. The firt column we convert is melb$Date using the "%d/%m/%Y", and the rest as Factor and integer.
 
 ```{r}
 # Converting Date datatype
 #Converting Date
 melb2$Date <- as.Date(melb2$Date, format = "%d/%m/%Y") 
 
-#Converting as Factor
-melb2$Suburb <- as.factor(melb2$Suburb)
-melb2$Method <- as.factor(melb2$Method)
-melb2$Type <- as.factor(melb2$Type)
-melb2$Regionname <- as.factor(melb2$Regionname)
+#Converting as Factor & Integer
+mutate(.data = melb2,
+       Suburb = as.factor(Suburb),
+       Method = as.factor(Method),
+       Type = as.factor(Type),
+       Regionname = as.factor(Regionname),
+       Bedroom2 = as.integer(Bedroom2),
+       Bathroom = as.integer(Bathroom),
+       Car = as.integer(Car),
+       Landsize = as.integer(Landsize)
+       )
+       
 
-
-#Converting as Interger
-melb2$Bedroom2 <- as.integer(melb2$Bedroom2)
-melb2$Bathroom <- as.integer(melb2$Bathroom)
-melb2$Car <- as.integer(melb2$Car)
-melb2$Landsize <- as.integer(melb2$Landsize)
-melb2$BuildingArea <- as.integer(melb2$BuildingArea)
 
 ```
+Next, we will rename the categories in the 'Regionname' and 'Type' columns to make them easier to read and eliminate any unnecessary duplicates.
 
-```{r}
-# Removing NA Rows and "0"
-melb2 <- melb2[!is.na(melb2$BuildingArea), ] #Removing rows that has NA BuildingArea
-melb2 <- melb2[melb2$Landsize != 0, ]
-melb2
-```
-```{r}
-#Checking the string and uniques
-str(melb2)
-unique(melb2$Regionname)
-```
 ```{r}
 #Renaming Categories for Regionname
 melb2 <- melb2 %>%
-  mutate(Regionname = recode(Regionname, "Northern Victoria" = "Northern Metropolitan")) #Changing north
+  mutate(Regionname = recode(Regionname, "Northern Victoria" = "Northern Metropolitan"), 
+        Regionname = recode(Regionname, "Eastern Victoria" = "Eastern Metropolitan"),
+        Regionname = recode(Regionname, "Western Victoria" = "Western Metropolitan"))
 
+#Renaming Categories for Type
 melb2 <- melb2 %>%
-  mutate(Regionname = recode(Regionname, "Eastern Victoria" = "Eastern Metropolitan")) #Changing east
-
-melb2 <- melb2 %>%
-  mutate(Regionname = recode(Regionname, "Western Victoria" = "Western Metropolitan")) #Changing west
-
+  mutate(Type = recode(Type, "h" = "Housing"), 
+        Type = recode(Type, "u" = "Unit"),
+        Type = recode(Type, "t" = "Townhouse"))
 ```
 
+#3. DATA EXPLORATION
 
-***3. DATA EXPLORATION***
+Calculate the price per square meter for each property in the dataset and then removes any outliers (values outside the 1.5*IQR range) from the 'PricePerSQM' column, resulting in a dataset with potentially more reliable data for analysis or visualization.
 
 ```{r}
 # Creating Price Per Squaremeter Column
@@ -126,32 +135,25 @@ UB <- Q3 + 1.5*IQR
 melb2 <- subset(melb2, PricePerSQM >= LB & PricePerSQM <= UB)
 ```
 
+According to the histogram below, the most frequent number of rooms is 3.
 
 ```{r}
 #Number of Rooms in Building
-hist(melb2$Rooms)
-mean(melb2$Rooms) # Center of Data = 2.977419 (Rooms)
+hist(melb2$Rooms, col = c('lightblue'), main = "Number of Rooms", xlab = "Rooms", density = 50)
+#mean(melb2$Rooms) # Center of Data = 2.977419 (Rooms)
 
-#Distance
-hist(melb2$Distance)
-median(melb2$Distance) # Center of Data = 9.2 (Distance)
-
-#Bedroom2
-hist(melb2$Bedroom2)
-median(melb2$Bedroom2) # Center of Data = 3 (Bedroom)
-
-#Bathroom
-hist(melb2$Bathroom)
-median(melb2$Bathroom) # Center of Data = 1 (Bathroom)
-
-#Car
-hist(melb2$Car)
-median(melb2$Car) # Center of Data = NA (Car)
-
-#BuildingArea
-hist(melb2$BuildingArea)
-median(melb2$BuildingArea) # Center of Data = 126 (Building Area)
 ```
+
+Based on the histogram below, the most frequently occurring distance to the CBD falls within the range of 5 to 15, with a median distance of 10.1.
+
+```{r}
+#Distance
+hist(melb2$Distance, col = c('orange'), main = "Melbourne Housing Distance", xlab = "Distance", density = 50)
+#median(melb2$Distance) # Center of Data = 10.1 (Distance)
+```
+
+According to the table below, the suburb with the highest count of property sold is Reservoir with a total 160 properties.
+
 ```{r}
 #Top 10 suburb with the highest number of sold properties
 
@@ -163,7 +165,7 @@ top10_freq_suburb <- freq_suburb_df[1:10, ]
 top10_freq_suburb
 ```
 
-
+According to the table below, the suburb with the highest average price per SQM is Princes Hill with a price of $7453.
 
 ```{r}
 # Top 10 Suburb with highest average of buying price per square meter
@@ -171,71 +173,118 @@ average_price <- melb2 %>%
   group_by(Suburb) %>%
   summarise(Average_Price_Per_Square_Meter = median(PricePerSQM, na.rm = TRUE)) # Creating a table
 average_price <- average_price[order(-average_price$Average_Price_Per_Square_Meter),] # Sorting order
-colnames(mean_price) <- c("Suburb", "Average price Per SQM") # Renaming columns
-top10_freq_suburb2 <- mean_price[1:10, ]
+colnames(average_price) <- c("Suburb", "Average price Per SQM") # Renaming columns
+top10_freq_suburb2 <- average_price[1:10, ]
 top10_freq_suburb2
 
 ```
 
+The Boxplot below indicates that the type of housing that is the most frequently sold is a townhouse type, and then housing, with a close third unit.
 
 ```{r}
-boxplot(melb2$PricePerSQM~ melb2$Type,horizontal = F)
+boxplot(melb2$PricePerSQM~ melb2$Type,horizontal = F, col = c('orange'), main = "Melbourne Housing Price & Type", xlab = "Type", ylab = "Price Per SQM")
 # h - house,cottage,villa, semi,terrace
 # u - unit, duplex
 # t - townhouse; dev site - development site
 ```
-Dari boxplot di atas, ditemukan bahwa Tipe residen Unit memiliki median harga per meter persegi tertinggi dibandingkan dengan tipe  Town House.
+
+## Relations between Price and Distance
+The plot below indicates a correlation between the distance of a house and the price per SQM. The closer you are to the CBD, the higher the price. Additionally, the plot also reveals that the lowest price located near the CBD is a unit type and the most frequent one is a housing type.
 
 ```{r}
 #Plotting Price PerSQM and Distance to CBD
-plot(melb2$PricePerSQM~ melb2$Distance)
-cor(melb2$Distance, melb2$PricePerSQM)
+#cor(melb2$Distance, melb2$PricePerSQM) = -0.4333912
+ggplot(data = melb2, aes(x = Distance, y = PricePerSQM, color = Type)) +
+  geom_point() +
+  labs(
+    title = "Relations between Price and Distance", subtitle = "Melbourne Housing",
+    x = "Distance",
+    y = "Price per SQM"
+  ) 
 ```
-Dari plot di atas ditemukan bahwa banyak housing yang terjual berdekatan dengan CBD. Namun, setelah melakukan pengecekan dengan cor(), terdapat korelasi negatif antara jarak CBD dengan harga per meter persegi. Sehingga, tidak ada hubungan antara jarak CBD dengan harga.
+## Melbourne Housing Rooms & Price
+From the plot below, it is found that housing units with two rooms have the highest median price per square meter."
 ```{r}
 #Plotting Price PerSQM and number of rooms
-boxplot(melb2$PricePerSQM~ melb2$Rooms)
+boxplot(melb2$PricePerSQM~ melb2$Rooms,horizontal = F, col = c('orange'), main = "Melbourne Housing Rooms & Price", xlab = "Rooms", ylab = "Price Per SQM")
 ```
-Dari plot di atas, ditemukan bahwa housing yang memiliki ruangan dua memiliki median harga per meter persegi tertinggi.
+## Melbourne Housing Bedroom & Price
+From the plot below, it is found that housing units with two bedrooms have the highest median price per square meter.
 
 ```{r}
 #Plotting Price PerSQM and number of bedroom
-boxplot(melb2$PricePerSQM~ melb2$Bedroom2)
+boxplot(melb2$PricePerSQM~ melb2$Bedroom2,horizontal = F, col = c('orange'), main = "Melbourne Housing Bedroom & Price", xlab = "Bedroom", ylab = "Price Per SQM")
 ```
-Dari plot di atas, ditemukan bahwa housing yang memiliki dua ruangan tidur memiliki median harga per meter persegi tertinggi.
+## Melbourne Housing Bathroom & Price
+From the plot below, it is found that housing units with four bathrooms have the highest median price per square meter.
 
 ```{r}
 #Plotting Price PerSQM and number of bathroom
-boxplot(melb2$PricePerSQM~ melb2$Bathroom)
+boxplot(melb2$PricePerSQM~ melb2$Bathroom,horizontal = F, col = c('orange'), main = "Melbourne Housing Bathroom & Price", xlab = "Bathroom", ylab = "Price Per SQM")
 ```
-Dari plot di atas, ditemukan bahwa housing yang memiliki dua ruangan tidur memiliki median harga per meter persegi tertinggi.
 
+
+
+## Melbourne Housing Region & Price
+According to the barplot below, it is observed that housing units located in the Southern Metropolitan region have the highest average price compared to other regions, while the South-Eastern region has the lowest average price. Typically, the housing type with the highest cost is 'Housing,' followed by 'Townhouse,' and then 'Unit'.
 
 ```{r}
 #Plotting Price PerSQM and region
-par(cex = 0.4) #Reducing Text size
-plot(melb2$PricePerSQM~ melb2$Regionname)
+
+ggplot(data = melb2, aes(x = Regionname, y = PricePerSQM, color = Type)) +
+  geom_col(mapping = aes(fill=Type), position = "dodge") +
+   theme(
+    text = element_text(size = 7),# Adjust the font size
+    panel.background = element_rect(fill="white")
+  )
 ```
-Dari boxplot di atas, ditemukan bahwa Southern Metropolitan memiliki median harga per meter persegi tertinggi, sedangkan South-Eastern Metropolitan memiliki harga terendah.
 
-***4. SUMMARY***
-
-Dalam data properti yang disajikan, properti yang paling banyak terjual berada di suburb Reservoir.
-
-Namun, properti yang paling mahal adalah sebuah townhouse yang terletak di area suburb East Melbourne. Properti ini memiliki luas sekitar 15703.536 meter persegi per meter persegi (pSQM), menjadikannya salah satu yang paling mahal dalam dataset ini. Townhouse ini memiliki 2 ruangan, 2 kamar tidur, dan 4 kamar mandi. Terletak di wilayah Southern Metropolitan, properti ini menawarkan kemewahan dan fasilitas yang sangat eksklusif, mencerminkan gaya hidup yang mewah dan nyaman bagi pemiliknya.
+Below is a map showing the housing sold in Northern Metropolitan region in Melbourne.
 
 
-----------------------------------------
+```{r}
+# Map
+melbmap <- subset(melb2, melb2$Regionname == "Northern Metropolitan")
+melbmap <- data.frame(lat=melbmap$Lattitude, # latitude
+                   lng=melbmap$Longtitude) # longitude
+set.seed(50)
+melbmap <- melbmap[sample(nrow(melbmap), 25), ]
+# get icon
+ico <- makeIcon(
+    iconUrl = "https://cdn-icons-png.flaticon.com/512/25/25694.png",
+    iconWidth=41/2,
+    iconHeight=41/2
+)
+
+
+# create a leaflet map widget
+map <- leaflet()
+# add tiles from open street map
+map <- addTiles(map = map)
+# add markers
+addMarkers(map = map, data = melbmap, icon = ico)
+
+```
+
+
+#4.  SUMMARY
+
+📌 
+In Melbourne, some of the most expensive houses often feature two roomy bedrooms and an impressive four bathrooms. Princes Hill, located in the Northern Metropolitan area, is one place where you can find such luxurious properties. 
+
+------------------------------------------------------------------------
+
 DOT POINTS
 
-1. Dalam data yang disajikan, properti yang paling banyak terjual berada pada suburb Reservoir
+1. The closer you are to the CBD, the higher the price
 
-2. Housing Termahal:
-- Area suburb East Melbourne (harga =  15703.536 pSQM)
-- Tipe Housing Townhouse
-- Memiliki 2 Ruangan
-- Memiliki 2 Bedroom
-- Memiliki 4 Bathroom
-- Lokasi di Southern Metropolitan
+2.  The most sold properties is located at Reservoir Suburb
 
+3.  Highest housing price in general
+
+- Highest price of housing is located at Princes Hill which is part of Northern Metropolitan
+- Highest price of housing type is a townhouse
+- 2 Rooms
+- 2 Bedroom
+- 4 Bathroom
 
