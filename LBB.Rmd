@@ -13,46 +13,55 @@ output:
     df_print: paged
 ---
 
-# 1. REAL ESTATE MELBOURNE
+# Programming for Data Science : Melbourne's Real Estate
 
-This is a snapshot of a dataset created by Tony Pino. link: <https://www.kaggle.com/datasets/dansbecker/melbourne-housing-snapshot>
+```{r}
+library(knitr)
+knitr::include_graphics("data_input/image.jpg")
+```
 
-It was scraped from publicly available results posted every week from Domain.com.au. He cleaned it well, and now it's up to you to make data analysis magic. The dataset includes Address, Type of Real estate, Suburb, Method of Selling, Rooms, Price, Real Estate Agent, Date of Sale and distance from C.B.D.
+`Img Source` : <https://i2.au.reastatic.net/800x600/4a991d2ad68caac22534dd9368493089cb544fac2efe20a7e8050bdc8ee2aedd/image.jpg>
+
+`link`: <https://www.kaggle.com/datasets/dansbecker/melbourne-housing-snapshot>
+
+**Melbourne**, positioned in the southeastern part of Australia, is home to a dynamic real estate scene that mirrors the city's diverse and evolving character. From the historic charm of Victorian-era homes nestled in inner suburbs to the modern skyline dominating the central business district, **Melbourne's real estate** is a tangible reflection of its rich history and contemporary lifestyle. As an integral aspect of urban living, real estate in Melbourne serves as a lens through which one can observe the city's economic vitality and changing societal preferences. The real estate market in Melbourne is not just about properties; it's a narrative of the city's past, present, and future.
+
+This data was scraped from publicly available results posted every week from <https://Domain.com.au>. The dataset includes Address, Type of Real estate, Suburb, Method of Selling, Rooms, Price, Real Estate Agent, Date of Sale and distance from C.B.D.
 
 ## Notes on Specific Variables
 
-Rooms: Number of rooms
+-   `Rooms`: Number of rooms
 
-Price: Price in dollars
+-   `Price`: Price in dollars
 
-Method: S - property sold; SP - property sold prior; PI - property passed in; PN - sold prior not disclosed; SN - sold not disclosed; NB - no bid; VB - vendor bid; W - withdrawn prior to auction; SA - sold after auction; SS - sold after auction price not disclosed. N/A - price or highest bid not available.
+-   `Method`: S - property sold; SP - property sold prior; PI - property passed in; PN - sold prior not disclosed; SN - sold not disclosed; NB - no bid; VB - vendor bid; W - withdrawn prior to auction; SA - sold after auction; SS - sold after auction price not disclosed. N/A - price or highest bid not available.
 
-Type: br - bedroom(s); h - house,cottage,villa, semi,terrace; u - unit, duplex; t - townhouse; dev site - development site; o res - other residential.
+-   `Type`: br - bedroom(s); h - house,cottage,villa, semi,terrace; u - unit, duplex; t - townhouse; dev site - development site; o res - other residential.
 
-SellerG: Real Estate Agent
+-   `SellerG`: Real Estate Agent
 
-Date: Date sold
+-   `Date`: Date sold
 
-Distance: Distance from CBD
+-   `Distance`: Distance from CBD
 
-Regionname: General Region (West, North West, North, North east ...etc)
+-   `Regionname`: General Region (West, North West, North, North east ...etc)
 
-Propertycount: Number of properties that exist in the suburb.
+-   `Propertycount`: Number of properties that exist in the suburb.
 
-Bedroom2 : Scraped \# of Bedrooms (from different source)
+-   `Bedroom2` : Scraped of Bedrooms (from different source)
 
-Bathroom: Number of Bathrooms
+-   `Bathroom`: Number of Bathrooms
 
-Car: Number of carspots
+-   `Car`: Number of carspots
 
-Landsize: Land Size
+-   `Landsize`: Land Size
 
-BuildingArea: Building Size
+-   `BuildingArea`: Building Size
 
-CouncilArea: Governing council for the area
+-   `CouncilArea`: Governing council for the area
 
----------
-The First step is inserting the csv file into R located in data_input and then installing the necessary plugins including dplyr, ggplot2, and leaflet that will be used.
+
+The First step is inserting the csv file into R located in data_input and then installing the necessary plugins including `dplyr`, `ggplot2`, and `leaflet` that will be used.
 
 ```{r}
 #Read data csv
@@ -64,7 +73,7 @@ library(leaflet) #install package leaflet for map plotting
 
 ```
 
-#2. DATA PREPERATION
+# Data Preparation
 
 Next, we will inspect the 'melb' folder and then remove duplicate rows based on the 'Address' column. Additionally, we will eliminate any unnecessary columns.
 
@@ -117,7 +126,7 @@ melb2 <- melb2 %>%
         Type = recode(Type, "t" = "Townhouse"))
 ```
 
-#3. DATA EXPLORATION
+# Data Explortaion
 
 Calculate the price per square meter for each property in the dataset and then removes any outliers (values outside the 1.5*IQR range) from the 'PricePerSQM' column, resulting in a dataset with potentially more reliable data for analysis or visualization.
 
@@ -179,54 +188,63 @@ top10_freq_suburb2
 
 ```
 
-The Boxplot below indicates that the type of housing that is the most frequently sold is a townhouse type, and then housing, with a close third unit.
-
 ```{r}
 boxplot(melb2$PricePerSQM~ melb2$Type,horizontal = F, col = c('orange'), main = "Melbourne Housing Price & Type", xlab = "Type", ylab = "Price Per SQM")
 # h - house,cottage,villa, semi,terrace
 # u - unit, duplex
 # t - townhouse; dev site - development site
 ```
+The boxplot indicates that the **type of housing** that has the highest median **price per SQM** is a **Townhouse type**, and then **Housing**, with a close third **Unit type**.
 
 ## Relations between Price and Distance
-The plot below indicates a correlation between the distance of a house and the price per SQM. The closer you are to the CBD, the higher the price. Additionally, the plot also reveals that the lowest price located near the CBD is a unit type and the most frequent one is a housing type.
 
 ```{r}
 #Plotting Price PerSQM and Distance to CBD
 #cor(melb2$Distance, melb2$PricePerSQM) = -0.4333912
 ggplot(data = melb2, aes(x = Distance, y = PricePerSQM, color = Type)) +
   geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
   labs(
     title = "Relations between Price and Distance", subtitle = "Melbourne Housing",
     x = "Distance",
     y = "Price per SQM"
-  ) 
+  ) +
+  theme_minimal()
 ```
+
+The plot illustrates a *correlation between house distance and price per square meter*. A **pronounced negative correlation** is observed for the **Housing Type**, indicating that shorter distances correspond to higher prices per square meter. The **Townhouse type** also exhibits a **negative correlation**, although it is not as robust as the Housing Type. Finally, the **Unit type** shows a **positive correlation**, suggesting that longer distances are generally associated with higher prices per square meter.
+
 ## Melbourne Housing Rooms & Price
-From the plot below, it is found that housing units with two rooms have the highest median price per square meter."
+
 ```{r}
 #Plotting Price PerSQM and number of rooms
 boxplot(melb2$PricePerSQM~ melb2$Rooms,horizontal = F, col = c('orange'), main = "Melbourne Housing Rooms & Price", xlab = "Rooms", ylab = "Price Per SQM")
 ```
+The data indicating that housing units with **two rooms** command the **highest median price per square** meter suggests an intriguing trend in the real estate market. This finding prompts a deeper exploration into the factors influencing the perceived value of properties with a specific room count.
+
 ## Melbourne Housing Bedroom & Price
-From the plot below, it is found that housing units with two bedrooms have the highest median price per square meter.
+
 
 ```{r}
 #Plotting Price PerSQM and number of bedroom
 boxplot(melb2$PricePerSQM~ melb2$Bedroom2,horizontal = F, col = c('orange'), main = "Melbourne Housing Bedroom & Price", xlab = "Bedroom", ylab = "Price Per SQM")
 ```
+
+The observation that housing units with two bedrooms command the highest median price per square meter unveils a significant trend in the real estate market. This finding prompts a closer examination of the factors contributing to the **premium associated with two-bedroom units**. It could be an indicative  of possibly **catering** to *young professionals, couples, or small families seeking functional yet compact living arrangements*. While the **single bedroom** has the lowest price among all of them. 
+
 ## Melbourne Housing Bathroom & Price
-From the plot below, it is found that housing units with four bathrooms have the highest median price per square meter.
 
 ```{r}
 #Plotting Price PerSQM and number of bathroom
 boxplot(melb2$PricePerSQM~ melb2$Bathroom,horizontal = F, col = c('orange'), main = "Melbourne Housing Bathroom & Price", xlab = "Bathroom", ylab = "Price Per SQM")
 ```
 
+The data reveals that housing units with **four bathrooms** exhibit the **highest median price per square meter** suggests a correlation between bathroom quantity and perceived property value, potentially indicating a market segment placing premium importance on luxurious amenities.However, **the price starts to drop-off** after it reached the number **6** where maximum is close to the IQR of the box. 
+
 
 
 ## Melbourne Housing Region & Price
-According to the barplot below, it is observed that housing units located in the Southern Metropolitan region have the highest average price compared to other regions, while the South-Eastern region has the lowest average price. Typically, the housing type with the highest cost is 'Housing,' followed by 'Townhouse,' and then 'Unit'.
+
 
 ```{r}
 #Plotting Price PerSQM and region
@@ -238,9 +256,10 @@ ggplot(data = melb2, aes(x = Regionname, y = PricePerSQM, color = Type)) +
     panel.background = element_rect(fill="white")
   )
 ```
+According to the barplot , it is observed that housing units located in the **Southern Metropolitan** region have the **highest average price** compared to other regions, while the **South-Eastern** region has the **lowest average price**. Typically, the **housing type** with the **highest cost** is `Housing`, followed by `Townhouse`, and then `Unit`.
 
-Below is a map showing the housing sold in Northern Metropolitan region in Melbourne.
 
+## Map of Housing Sold in Northern Metropolitan - Melbourne
 
 ```{r}
 # Map
@@ -267,24 +286,23 @@ addMarkers(map = map, data = melbmap, icon = ico)
 ```
 
 
-#4.  SUMMARY
+#  Conclusion
 
 📌 
 In Melbourne, some of the most expensive houses often feature two roomy bedrooms and an impressive four bathrooms. Princes Hill, located in the Northern Metropolitan area, is one place where you can find such luxurious properties. 
 
-------------------------------------------------------------------------
 
-DOT POINTS
+**DOT POINTS**
 
 1. The closer you are to the CBD, the higher the price
 
 2.  The most sold properties is located at Reservoir Suburb
 
-3.  Highest housing price in general
+3.  Highest housing price in general:
 
-- Highest price of housing is located at Princes Hill which is part of Northern Metropolitan
-- Highest price of housing type is a townhouse
-- 2 Rooms
-- 2 Bedroom
-- 4 Bathroom
+-   Highest price of housing is located at Princes Hill which is part of Northern Metropolitan
+-   Highest price of housing type is a townhouse
+-   2 Rooms
+-   2 Bedroom
+-   4 Bathroom
 
